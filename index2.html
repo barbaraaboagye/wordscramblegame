@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word Scramble Challenge - All Levels</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React and ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .scramble-text {
+            letter-spacing: 0.15em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        .animate-bounce-short {
+            animation: bounce-short 0.5s ease-in-out 1;
+        }
+        @keyframes bounce-short {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .animate-shake {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+        /* Custom Scrollbar for the grid container */
+        .grid-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        .grid-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        .grid-container::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 3px;
+        }
+        #root {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- DATA REPOSITORY ---
+        const gameData = {
+            "A1": [
+                { word: "APPLE", hint: "A common red or green fruit.", category: "Food" },
+                { word: "HOUSE", hint: "A building where people live.", category: "Living" },
+                { word: "TABLE", hint: "Furniture with four legs used for eating.", category: "Furniture" },
+                { word: "WATER", hint: "Clear liquid you drink to survive.", category: "Drinks" },
+                { word: "HAPPY", hint: "Feeling or showing pleasure; not sad.", category: "Emotions" },
+                { word: "BREAD", hint: "Food made of flour, water, and yeast.", category: "Food" },
+                { word: "SCHOOL", hint: "A place where children go to learn.", category: "Places" },
+                { word: "GREEN", hint: "The color of grass and leaves.", category: "Colors" },
+                { word: "NIGHT", hint: "The time when it is dark and you sleep.", category: "Time" },
+                { word: "FAMILY", hint: "Parents and children living together.", category: "People" },
+                { word: "CHAIR", hint: "A seat with a back for one person.", category: "Furniture" },
+                { word: "RIVER", hint: "A large natural stream of water.", category: "Nature" },
+                { word: "PHONE", hint: "Device used to call people.", category: "Technology" },
+                { word: "MONEY", hint: "Coins or banknotes used to buy things.", category: "Shopping" },
+                { word: "WORLD", hint: "The earth, together with all its countries.", category: "Nature" },
+                { word: "MUSIC", hint: "Sounds that are pleasant to listen to.", category: "Arts" },
+                { word: "TRAIN", hint: "A railway engine connecting carriages.", category: "Transport" },
+                { word: "WATCH", hint: "A small clock worn on a wrist.", category: "Accessories" },
+                { word: "SHOES", hint: "What you wear on your feet.", category: "Clothes" },
+                { word: "PAPER", hint: "Material used for writing or printing.", category: "Stationery" },
+                { word: "BEACH", hint: "Sandy area next to the sea.", category: "Places" },
+                { word: "LUNCH", hint: "A meal eaten in the middle of the day.", category: "Food" },
+                { word: "PARTY", hint: "A social gathering to have fun.", category: "Social" },
+                { word: "GARDEN", hint: "Area of ground for growing plants.", category: "Nature" },
+                { word: "HORSE", hint: "A large animal people can ride.", category: "Animals" },
+                { word: "WINDOW", hint: "Glass opening in a wall to see out.", category: "House" },
+                { word: "SISTER", hint: "A female sibling.", category: "Family" },
+                { word: "DOCTOR", hint: "A person who treats sick people.", category: "Jobs" },
+                { word: "SUMMER", hint: "The hottest season of the year.", category: "Seasons" },
+                { word: "YELLOW", hint: "The color of the sun or lemons.", category: "Colors" }
+            ],
+            "A2": [
+                { word: "AIRPORT", hint: "Place where planes take off and land.", category: "Travel" },
+                { word: "BRIDGE", hint: "Structure built over a river or road.", category: "Places" },
+                { word: "CASTLE", hint: "A large strong building from the past.", category: "History" },
+                { word: "DECIDE", hint: "To make a choice.", category: "Verbs" },
+                { word: "ENERGY", hint: "Power derived from resources.", category: "Science" },
+                { word: "FAMOUS", hint: "Known about by many people.", category: "Adjectives" },
+                { word: "GUITAR", hint: "Musical instrument with strings.", category: "Music" },
+                { word: "HEALTH", hint: "The state of being free from illness.", category: "Body" },
+                { word: "INSECT", hint: "A small animal with six legs.", category: "Animals" },
+                { word: "JACKET", hint: "A short coat.", category: "Clothes" },
+                { word: "KITCHEN", hint: "Room where food is cooked.", category: "House" },
+                { word: "LETTER", hint: "A written message sent by post.", category: "Communication" },
+                { word: "MUSEUM", hint: "Building where history is displayed.", category: "Places" },
+                { word: "NATURE", hint: "The physical world, plants and animals.", category: "World" },
+                { word: "OFFICE", hint: "Room where business work is done.", category: "Work" },
+                { word: "PLANET", hint: "A large body orbiting a star.", category: "Space" },
+                { word: "QUIET", hint: "Making little or no noise.", category: "Adjectives" },
+                { word: "REPAIR", hint: "To fix something that is broken.", category: "Verbs" },
+                { word: "STREET", hint: "Public road in a city or town.", category: "Places" },
+                { word: "TICKET", hint: "Piece of paper giving right to enter.", category: "Travel" },
+                { word: "UNCLE", hint: "Brother of your mother or father.", category: "Family" },
+                { word: "VISIT", hint: "To go to see a person or place.", category: "Verbs" },
+                { word: "WALLET", hint: "Small case for holding money.", category: "Personal" },
+                { word: "WHEEL", hint: "Round object that turns an axle.", category: "Objects" },
+                { word: "YOUNG", hint: "Having lived for only a short time.", category: "Adjectives" },
+                { word: "BOTTLE", hint: "Container usually made of glass or plastic.", category: "Objects" },
+                { word: "DREAM", hint: "Thoughts and images during sleep.", category: "Sleep" },
+                { word: "FOREST", hint: "Large area covered chiefly with trees.", category: "Nature" },
+                { word: "GHOST", hint: "The spirit of a dead person.", category: "Fantasy" },
+                { word: "ISLAND", hint: "Land surrounded by water.", category: "Geography" }
+            ],
+            "B1": [
+                { word: "ADVENTURE", hint: "An unusual and exciting experience.", category: "Life" },
+                { word: "BELIEVE", hint: "To accept something as true.", category: "Verbs" },
+                { word: "CENTURY", hint: "A period of one hundred years.", category: "Time" },
+                { word: "DIFFICULT", hint: "Needing much effort; not easy.", category: "Adjectives" },
+                { word: "EXCITED", hint: "Very enthusiastic and eager.", category: "Emotions" },
+                { word: "FESTIVAL", hint: "A day or period of celebration.", category: "Events" },
+                { word: "GALLERY", hint: "Room or building for displaying art.", category: "Places" },
+                { word: "HISTORY", hint: "The study of past events.", category: "Education" },
+                { word: "IMAGINE", hint: "To form a mental image.", category: "Mind" },
+                { word: "JOURNEY", hint: "Act of traveling from one place to another.", category: "Travel" },
+                { word: "KNOWLEDGE", hint: "Facts and skills acquired by experience.", category: "Education" },
+                { word: "LANGUAGE", hint: "Method of human communication.", category: "Communication" },
+                { word: "MEMORY", hint: "The faculty by which the mind stores info.", category: "Mind" },
+                { word: "NERVOUS", hint: "Easily agitated or alarmed.", category: "Emotions" },
+                { word: "OPINION", hint: "A view or judgment formed about something.", category: "Mind" },
+                { word: "PERFECT", hint: "Having all required or desirable elements.", category: "Adjectives" },
+                { word: "QUALITY", hint: "The standard of something.", category: "Abstract" },
+                { word: "REASON", hint: "A cause, explanation, or justification.", category: "Logic" },
+                { word: "SUCCESS", hint: "The accomplishment of an aim.", category: "Abstract" },
+                { word: "TERRIBLE", hint: "Extremely bad or serious.", category: "Adjectives" },
+                { word: "UNIFORM", hint: "Distinctive clothing worn by a group.", category: "Clothes" },
+                { word: "VARIETY", hint: "The quality or state of being different.", category: "Abstract" },
+                { word: "WEATHER", hint: "State of the atmosphere at a place.", category: "Nature" },
+                { word: "ACHIEVE", hint: "To reach a goal by effort.", category: "Verbs" },
+                { word: "BALANCE", hint: "Even distribution of weight.", category: "Physics" },
+                { word: "CAREER", hint: "An occupation undertaken for a period.", category: "Work" },
+                { word: "DAMAGE", hint: "Physical harm that impairs value.", category: "Verbs" },
+                { word: "EFFECT", hint: "A change which is a result of an action.", category: "Abstract" },
+                { word: "FLIGHT", hint: "The action or process of flying.", category: "Travel" },
+                { word: "GROWTH", hint: "The process of increasing in size.", category: "Nature" }
+            ],
+            "B2": [
+                { word: "ABSOLUTE", hint: "Not qualified or diminished in any way.", category: "Adjectives" },
+                { word: "BENEFIT", hint: "An advantage or profit gained.", category: "Abstract" },
+                { word: "CERTAIN", hint: "Known for sure; established beyond doubt.", category: "Adjectives" },
+                { word: "DISCUSS", hint: "Talk about something with others.", category: "Verbs" },
+                { word: "EFFICIENT", hint: "Achieving max productivity with min waste.", category: "Adjectives" },
+                { word: "FEATURE", hint: "A distinctive attribute or aspect.", category: "Abstract" },
+                { word: "GENUINE", hint: "Truly what something is said to be.", category: "Adjectives" },
+                { word: "HARMFUL", hint: "Causing or likely to cause damage.", category: "Adjectives" },
+                { word: "ILLEGAL", hint: "Contrary to or forbidden by law.", category: "Law" },
+                { word: "JUSTIFY", hint: "Show or prove to be right or reasonable.", category: "Verbs" },
+                { word: "LOGICAL", hint: "Of or according to the rules of logic.", category: "Mind" },
+                { word: "MENTION", hint: "Refer to something briefly.", category: "Verbs" },
+                { word: "NEGATIVE", hint: "Consisting in or characterized by the absence rather than the presence of distinguishing features.", category: "Adjectives" },
+                { word: "OBSERVE", hint: "Notice or perceive something.", category: "Science" },
+                { word: "PASSION", hint: "Strong and barely controllable emotion.", category: "Emotions" },
+                { word: "REACT", hint: "Respond or behave in a particular way.", category: "Verbs" },
+                { word: "SERIOUS", hint: "Demanding or characterized by careful consideration.", category: "Adjectives" },
+                { word: "THEORY", hint: "A supposition or a system of ideas.", category: "Science" },
+                { word: "URGENT", hint: "Requiring immediate action or attention.", category: "Adjectives" },
+                { word: "VALUABLE", hint: "Worth a great deal of money.", category: "Adjectives" },
+                { word: "WONDER", hint: "A feeling of surprise mingled with admiration.", category: "Emotions" },
+                { word: "ANXIETY", hint: "A feeling of worry, nervousness, or unease.", category: "Emotions" },
+                { word: "BARRIER", hint: "A fence or other obstacle that prevents movement.", category: "Objects" },
+                { word: "COMPLEX", hint: "Consisting of many different and connected parts.", category: "Adjectives" },
+                { word: "DISPLAY", hint: "Make a prominent exhibition of something.", category: "Verbs" },
+                { word: "EXPAND", hint: "Become or make larger or more extensive.", category: "Verbs" },
+                { word: "FREQUENT", hint: "Occurring or done on many occasions.", category: "Adjectives" },
+                { word: "GLOBAL", hint: "Relating to the whole world.", category: "Adjectives" },
+                { word: "HONEST", hint: "Free of deceit and untruthfulness.", category: "Personality" },
+                { word: "INJURY", hint: "Physical harm or damage to a person.", category: "Health" }
+            ],
+            "C1": [
+                { word: "BENEVOLENT", hint: "Describes someone who is kind, generous, and charitable.", category: "Personality" },
+                { word: "COURAGEOUS", hint: "Being brave; showing the ability to do something that frightens you.", category: "Personality" },
+                { word: "RELUCTANT", hint: "Feeling hesitant or unwilling to do something.", category: "Emotions" },
+                { word: "AMBITIOUS", hint: "Having a strong desire and determination to succeed.", category: "Personality" },
+                { word: "MELANCHOLY", hint: "A feeling of deep sadness, often with no obvious cause.", category: "Emotions" },
+                { word: "MISCHIEVOUS", hint: "Naughty; causing trouble in a playful way.", category: "Behavior" },
+                { word: "INEVITABLE", hint: "Something that is certain to happen and cannot be avoided.", category: "Abstract" },
+                { word: "EXAGGERATE", hint: "To represent something as being larger or better than it really is.", category: "Verbs" },
+                { word: "ANONYMOUS", hint: "Not identified by name; of unknown authorship.", category: "Identity" },
+                { word: "EXTRAORDINARY", hint: "Very unusual or remarkable; outside of the ordinary.", category: "Adjectives" },
+                { word: "METAPHOR", hint: "A figure of speech that compares two things implicitly.", category: "Literature" },
+                { word: "PROTAGONIST", hint: "The main character or hero of a story.", category: "Literature" },
+                { word: "DIALOGUE", hint: "Conversation between two or more people in a book or play.", category: "Literature" },
+                { word: "NARRATOR", hint: "The person or voice that tells the story.", category: "Literature" },
+                { word: "ALLITERATION", hint: "The occurrence of the same letter or sound at the beginning of adjacent words.", category: "Literature" },
+                { word: "SYNONYM", hint: "A word that means exactly or nearly the same as another word.", category: "Linguistics" },
+                { word: "GENRE", hint: "A category of artistic composition.", category: "Arts" },
+                { word: "PERSUASIVE", hint: "Writing intended to convince someone.", category: "Rhetoric" },
+                { word: "BIOGRAPHY", hint: "An account of someone's life written by someone else.", category: "Literature" },
+                { word: "CLIMAX", hint: "The most exciting or intense part of a story.", category: "Literature" },
+                { word: "HYPOTHESIS", hint: "An educated guess based on limited evidence.", category: "Science" },
+                { word: "ATMOSPHERE", hint: "The envelope of gases surrounding the earth.", category: "Science" },
+                { word: "PREDATOR", hint: "An animal that naturally preys on others.", category: "Biology" },
+                { word: "PRECIPITATION", hint: "Rain, snow, sleet, or hail.", category: "Weather" },
+                { word: "COMPETITION", hint: "Striving to gain or win something by defeating others.", category: "Social" },
+                { word: "CONSEQUENCE", hint: "A result or effect of an action or condition.", category: "Logic" },
+                { word: "INDIGENOUS", hint: "Native to a specific region.", category: "Anthropology" },
+                { word: "ENVIRONMENT", hint: "The surroundings or conditions in which we live.", category: "Nature" },
+                { word: "GRAVITY", hint: "Force attracting a body toward the earth.", category: "Physics" },
+                { word: "GALAXY", hint: "A massive system of stars, gas, and dust.", category: "Astronomy" }
+            ],
+            "C2": [
+                { word: "ACQUIESCE", hint: "To accept something reluctantly but without protest.", category: "Verbs" },
+                { word: "CACOPHONY", hint: "A harsh, discordant mixture of sounds.", category: "Sound" },
+                { word: "DELETERIOUS", hint: "Causing harm or damage.", category: "Adjectives" },
+                { word: "EPHEMERAL", hint: "Lasting for a very short time.", category: "Time" },
+                { word: "FASTIDIOUS", hint: "Very attentive to and concerned about accuracy and detail.", category: "Personality" },
+                { word: "GREGARIOUS", hint: "Fond of company; sociable.", category: "Personality" },
+                { word: "HACKNEYED", hint: "Lacking significance through having been overused.", category: "Adjectives" },
+                { word: "ICONOCLAST", hint: "A person who attacks cherished beliefs or institutions.", category: "People" },
+                { word: "JUXTAPOSE", hint: "To place close together for contrasting effect.", category: "Verbs" },
+                { word: "KINETIC", hint: "Relating to or resulting from motion.", category: "Physics" },
+                { word: "LETHARGIC", hint: "Affected by lethargy; sluggish and apathetic.", category: "Health" },
+                { word: "MAGNANIMOUS", hint: "Generous or forgiving, especially toward a rival.", category: "Personality" },
+                { word: "NEFARIOUS", hint: "Wicked or criminal.", category: "Adjectives" },
+                { word: "OBSEQUIOUS", hint: "Obedient or attentive to an excessive or servile degree.", category: "Behavior" },
+                { word: "PANACEA", hint: "A solution or remedy for all difficulties or diseases.", category: "Medicine" },
+                { word: "QUINTESSENTIAL", hint: "Representing the most perfect or typical example.", category: "Adjectives" },
+                { word: "RECALCITRANT", hint: "Having an obstinately uncooperative attitude.", category: "Personality" },
+                { word: "SAGACIOUS", hint: "Having or showing keen mental discernment and good judgment.", category: "Intellect" },
+                { word: "TACITURN", hint: "Reserved or uncommunicative in speech; saying little.", category: "Personality" },
+                { word: "UBIQUITOUS", hint: "Present, appearing, or found everywhere.", category: "Adjectives" },
+                { word: "VACILLATE", hint: "Alternate or waver between different opinions or actions.", category: "Verbs" },
+                { word: "WISTFUL", hint: "Having or showing a feeling of vague or regretful longing.", category: "Emotions" },
+                { word: "XENOPHOBIA", hint: "Dislike of or prejudice against people from other countries.", category: "Society" },
+                { word: "YIELDING", hint: "Giving way under pressure; not hard or rigid.", category: "Physical" },
+                { word: "ZEALOUS", hint: "Having or showing great energy or enthusiasm.", category: "Emotions" },
+                { word: "ESOTERIC", hint: "Intended for or likely to be understood by only a small number.", category: "Knowledge" },
+                { word: "PRAGMATIC", hint: "Dealing with things sensibly and realistically.", category: "Philosophy" },
+                { word: "ELOQUENT", hint: "Fluent or persuasive in speaking or writing.", category: "Communication" },
+                { word: "ALTRUISM", hint: "The belief in or practice of disinterested and selfless concern for others.", category: "Ethics" },
+                { word: "EUPHEMISM", hint: "A mild word substituted for one considered to be too harsh.", category: "Language" }
+            ]
+        };
+
+        // Helper to scramble a word
+        const scrambleString = (str) => {
+            const arr = str.split('');
+            // Simple shuffle
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            // Check if same as original, if so, scramble again
+            if (arr.join('') === str && str.length > 1) return scrambleString(str);
+            return arr.join('');
+        };
+
+        // Format Seconds to MM:SS
+        const formatTime = (seconds) => {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        };
+
+        function Footer() {
+            return (
+                <footer className="w-full text-center p-4 text-white/80 text-sm mt-auto">
+                    Made with ❤️ for learners. &copy; 2026 Je Parle English.
+                </footer>
+            );
+        }
+
+        function App() {
+            const [gameState, setGameState] = useState('welcome'); // welcome, playing, finished
+            const [activeLevel, setActiveLevel] = useState('C1');
+            const [activeWordList, setActiveWordList] = useState([]);
+            
+            const [questions, setQuestions] = useState([]);
+            const [currentIndex, setCurrentIndex] = useState(0);
+            const [userInput, setUserInput] = useState('');
+            const [score, setScore] = useState(0);
+            const [shake, setShake] = useState(false);
+            
+            // New Features State
+            const [timeElapsed, setTimeElapsed] = useState(0);
+            const [isTimerActive, setIsTimerActive] = useState(false);
+            const [revealedCount, setRevealedCount] = useState(0); // Track revealed letters for current word
+            const [hasSavedGame, setHasSavedGame] = useState(false);
+            
+            const inputRef = useRef(null);
+            const fileInputRef = useRef(null);
+
+            // Check for saved game on load
+            useEffect(() => {
+                const saved = localStorage.getItem('jeParleScrambleSave');
+                if (saved) {
+                    setHasSavedGame(true);
+                }
+            }, []);
+
+            // Timer Logic
+            useEffect(() => {
+                let interval;
+                if (isTimerActive && gameState === 'playing') {
+                    interval = setInterval(() => {
+                        setTimeElapsed(prev => prev + 1);
+                    }, 1000);
+                }
+                return () => clearInterval(interval);
+            }, [isTimerActive, gameState]);
+
+            // Auto-Save Logic
+            useEffect(() => {
+                if (gameState === 'playing') {
+                    const saveData = {
+                        questions,
+                        score,
+                        timeElapsed,
+                        activeLevel,
+                        currentIndex
+                    };
+                    localStorage.setItem('jeParleScrambleSave', JSON.stringify(saveData));
+                    setHasSavedGame(true);
+                } else if (gameState === 'finished') {
+                    localStorage.removeItem('jeParleScrambleSave');
+                    setHasSavedGame(false);
+                }
+            }, [questions, score, timeElapsed, activeLevel, currentIndex, gameState]);
+
+            // Reset revealed count when switching question
+            useEffect(() => {
+                setRevealedCount(0);
+            }, [currentIndex]);
+
+
+            const startGame = (level, customData = null) => {
+                let listToUse = [];
+                let levelLabel = level;
+
+                if (level === 'Custom' && customData) {
+                    listToUse = customData;
+                    levelLabel = 'Custom';
+                } else {
+                    listToUse = gameData[level];
+                    levelLabel = level;
+                }
+
+                if (!listToUse || listToUse.length === 0) {
+                    alert("Error loading word list.");
+                    return;
+                }
+
+                setActiveLevel(levelLabel);
+                
+                // Prepare questions
+                const prepared = listToUse.map((q, idx) => ({
+                    ...q,
+                    scramble: scrambleString(q.word),
+                    solved: false,
+                    id: idx
+                }));
+                
+                setQuestions(prepared);
+                setCurrentIndex(0);
+                setScore(0);
+                setTimeElapsed(0);
+                setUserInput('');
+                setGameState('playing');
+                setIsTimerActive(true);
+            };
+
+            const resumeGame = () => {
+                const saved = localStorage.getItem('jeParleScrambleSave');
+                if (saved) {
+                    try {
+                        const data = JSON.parse(saved);
+                        setQuestions(data.questions);
+                        setScore(data.score);
+                        setTimeElapsed(data.timeElapsed);
+                        setActiveLevel(data.activeLevel);
+                        setCurrentIndex(data.currentIndex);
+                        setGameState('playing');
+                        setIsTimerActive(true);
+                    } catch (e) {
+                        console.error("Save file corrupted", e);
+                        alert("Could not resume game. Save data might be corrupted.");
+                        localStorage.removeItem('jeParleScrambleSave');
+                        setHasSavedGame(false);
+                    }
+                }
+            };
+
+            const handleFileUpload = (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const content = e.target.result;
+                    let validList = [];
+                    
+                    try {
+                        const json = JSON.parse(content);
+                        if (Array.isArray(json)) {
+                            validList = json.map(item => {
+                                if (typeof item === 'string') {
+                                    return { word: item.trim().toUpperCase(), hint: "Unscramble the word", category: "Custom" };
+                                } else if (item && item.word) {
+                                    return { 
+                                        word: item.word.toUpperCase(), 
+                                        hint: item.hint || "Unscramble the word", 
+                                        category: item.category || "Custom" 
+                                    };
+                                }
+                                return null;
+                            }).filter(Boolean);
+                        }
+                    } catch (err) {
+                        validList = content.split(/\r?\n/)
+                            .map(line => line.trim())
+                            .filter(line => line.length > 0)
+                            .map(word => ({
+                                word: word.toUpperCase(),
+                                hint: "Unscramble the word",
+                                category: "Custom"
+                            }));
+                    }
+
+                    if (validList.length > 0) {
+                        startGame('Custom', validList);
+                    } else {
+                        alert("Could not load words. Please upload a valid JSON or TXT file.");
+                    }
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                };
+                reader.readAsText(file);
+            };
+
+            const downloadTemplate = () => {
+                const template = [
+                    { word: "EXAMPLE", hint: "A representative form or pattern", category: "Demo" },
+                    { word: "LEARNING", hint: "Acquisition of knowledge", category: "Education" }
+                ];
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(template, null, 2));
+                const downloadAnchorNode = document.createElement('a');
+                downloadAnchorNode.setAttribute("href", dataStr);
+                downloadAnchorNode.setAttribute("download", "word_scramble_template.json");
+                document.body.appendChild(downloadAnchorNode);
+                downloadAnchorNode.click();
+                downloadAnchorNode.remove();
+            };
+
+            // Focus Effect
+            useEffect(() => {
+                if (gameState === 'playing' && questions[currentIndex] && !questions[currentIndex].solved) {
+                    setTimeout(() => {
+                        if (inputRef.current) inputRef.current.focus();
+                    }, 50);
+                }
+            }, [currentIndex, gameState]);
+
+            // Win Condition
+            useEffect(() => {
+                if (gameState === 'playing' && questions.length > 0 && questions.every(q => q.solved)) {
+                    setIsTimerActive(false); // Stop timer
+                    setTimeout(() => setGameState('finished'), 1000);
+                }
+            }, [questions]);
+
+            const handleReveal = () => {
+                const currentQ = questions[currentIndex];
+                if (currentQ.solved) return;
+                
+                // Max reveal is length - 1 (don't reveal the whole word automatically)
+                if (revealedCount < currentQ.word.length - 1) {
+                    setRevealedCount(prev => prev + 1);
+                    setScore(prev => Math.max(0, prev - 5)); // Deduct 5 points, min 0
+                    
+                    // Optional: pre-fill input with the revealed part
+                    // setUserInput(currentQ.word.substring(0, revealedCount + 1));
+                }
+            };
+
+            const handleCheck = (e) => {
+                e.preventDefault();
+                const currentQ = questions[currentIndex];
+                
+                if (currentQ.solved) return;
+
+                const cleanInput = userInput.trim().toUpperCase();
+
+                if (cleanInput === currentQ.word) {
+                    const newQuestions = [...questions];
+                    newQuestions[currentIndex].solved = true;
+                    setQuestions(newQuestions);
+                    setScore(s => s + 10);
+                    setUserInput('');
+                } else {
+                    setShake(true);
+                    setTimeout(() => setShake(false), 500);
+                }
+            };
+
+            const switchQuestion = (index) => {
+                setCurrentIndex(index);
+                setUserInput('');
+            };
+
+            // --- UI RENDERERS ---
+
+            if (gameState === 'welcome') {
+                return (
+                    <>
+                        <div className="flex-1 flex items-center justify-center p-4">
+                            <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-2xl w-full text-center relative">
+                                <div className="mb-2 text-indigo-500">
+                                    <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                                </div>
+                                <h1 className="text-4xl font-extrabold text-indigo-600 mb-2">Word Scramble</h1>
+                                <p className="text-gray-600 mb-8 text-lg">
+                                    Select your proficiency level to begin the challenge.
+                                </p>
+                                
+                                {hasSavedGame && (
+                                    <button 
+                                        onClick={resumeGame}
+                                        className="mb-8 w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-xl transition duration-200 text-lg shadow-lg flex items-center justify-center animate-bounce-short"
+                                    >
+                                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                        Resume Game
+                                    </button>
+                                )}
+
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+                                    {Object.keys(gameData).map((level) => (
+                                        <button
+                                            key={level}
+                                            onClick={() => startGame(level)}
+                                            className="flex flex-col items-center justify-center p-4 rounded-xl border-2 border-indigo-100 hover:border-indigo-500 hover:bg-indigo-50 transition duration-200 group"
+                                        >
+                                            <span className="text-2xl font-black text-indigo-900 group-hover:text-indigo-600">{level}</span>
+                                            <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold">
+                                                {level === 'A1' ? 'Beginner' : 
+                                                 level === 'A2' ? 'Elementary' :
+                                                 level === 'B1' ? 'Intermediate' :
+                                                 level === 'B2' ? 'Upper Int.' :
+                                                 level === 'C1' ? 'Advanced' : 'Proficient'}
+                                            </span>
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <div className="flex flex-col md:flex-row space-y-3 md:space-y-0 md:space-x-3 justify-center pt-6 border-t border-gray-100">
+                                    <input 
+                                        type="file" 
+                                        ref={fileInputRef} 
+                                        onChange={handleFileUpload} 
+                                        accept=".json,.txt" 
+                                        className="hidden" 
+                                    />
+                                    <button 
+                                        onClick={() => fileInputRef.current.click()}
+                                        className="text-sm px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-bold transition flex items-center justify-center"
+                                    >
+                                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                                        Import Words (JSON/TXT)
+                                    </button>
+                                    <button 
+                                        onClick={downloadTemplate}
+                                        className="text-sm px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-bold transition flex items-center justify-center"
+                                    >
+                                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                        JSON Template
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <Footer />
+                    </>
+                );
+            }
+
+            if (gameState === 'finished') {
+                return (
+                    <>
+                        <div className="flex-1 flex items-center justify-center p-4">
+                            <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-lg w-full text-center">
+                                <h2 className="text-3xl font-bold text-gray-800 mb-2">Level Complete!</h2>
+                                <div className="text-6xl mb-6">🏆</div>
+                                <div className="inline-block px-4 py-1 bg-indigo-100 text-indigo-700 rounded-full font-bold mb-6">
+                                    Level: {activeLevel}
+                                </div>
+                                <div className="grid grid-cols-2 gap-4 mb-8 text-center">
+                                    <div className="bg-gray-50 p-3 rounded-lg">
+                                        <p className="text-gray-500 text-xs uppercase font-bold">Time</p>
+                                        <p className="text-2xl font-black text-gray-800">{formatTime(timeElapsed)}</p>
+                                    </div>
+                                    <div className="bg-gray-50 p-3 rounded-lg">
+                                        <p className="text-gray-500 text-xs uppercase font-bold">Score</p>
+                                        <p className="text-2xl font-black text-indigo-600">{score}</p>
+                                    </div>
+                                </div>
+                                
+                                <p className="text-gray-600 mb-8">
+                                    You have successfully unscrambled all {questions.length} words.
+                                </p>
+
+                                <button 
+                                    onClick={() => setGameState('welcome')}
+                                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-xl transition duration-200"
+                                >
+                                    Choose Another Level
+                                </button>
+                            </div>
+                        </div>
+                        <Footer />
+                    </>
+                );
+            }
+
+            // Playing State
+            const currentQ = questions[currentIndex];
+            const solvedCount = questions.filter(q => q.solved).length;
+
+            return (
+                <>
+                    <div className="flex-1 flex flex-col items-center justify-start p-4 pt-4 md:pt-8">
+                        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden max-w-2xl w-full flex flex-col mb-4">
+                            
+                            {/* Header */}
+                            <div className="bg-indigo-600 p-4 flex justify-between items-center text-white">
+                                <div className="flex items-center space-x-4">
+                                    <div className="flex flex-col">
+                                        <span className="font-bold text-lg">Score: {score}</span>
+                                        <span className="text-indigo-200 text-xs uppercase font-bold tracking-wider">
+                                            Level: {activeLevel}
+                                        </span>
+                                    </div>
+                                    {/* Timer Display */}
+                                    <div className="flex items-center bg-indigo-700/50 px-3 py-1 rounded-lg border border-indigo-500">
+                                        <svg className="w-4 h-4 mr-1 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                        <span className="font-mono font-bold text-indigo-100">{formatTime(timeElapsed)}</span>
+                                    </div>
+                                </div>
+                                
+                                <div className="flex items-center space-x-2">
+                                    <button 
+                                        onClick={() => setGameState('welcome')}
+                                        className="text-xs bg-indigo-800 hover:bg-indigo-700 px-2 py-1 rounded text-indigo-200 mr-2"
+                                    >
+                                        Menu
+                                    </button>
+                                    <div className="font-bold text-indigo-100 bg-indigo-700 px-3 py-1 rounded-lg text-sm">
+                                        {solvedCount} / {questions.length}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Navigation Tabs (Grid) */}
+                            <div className="bg-gray-50 p-4 border-b border-gray-200 max-h-32 overflow-y-auto grid-container">
+                                <div className="grid grid-cols-6 sm:grid-cols-10 gap-2">
+                                    {questions.map((q, idx) => (
+                                        <button
+                                            key={idx}
+                                            onClick={() => switchQuestion(idx)}
+                                            className={`
+                                                relative h-10 w-full rounded-md text-sm font-bold transition-all duration-200 flex items-center justify-center
+                                                ${idx === currentIndex 
+                                                    ? 'ring-2 ring-indigo-500 ring-offset-2 z-10 transform scale-110 shadow-md' 
+                                                    : 'hover:bg-gray-200'
+                                                }
+                                                ${q.solved 
+                                                    ? 'bg-green-500 text-white' 
+                                                    : (idx === currentIndex ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-600')
+                                                }
+                                            `}
+                                            title={`Word ${idx + 1}`}
+                                        >
+                                            {q.solved ? (
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                </svg>
+                                            ) : (
+                                                idx + 1
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Game Area */}
+                            <div className="flex-1 p-8 flex flex-col items-center justify-center min-h-[350px]">
+                                
+                                <span className="inline-block px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-bold tracking-wide mb-6 uppercase">
+                                    {currentQ.category}
+                                </span>
+
+                                <div className="mb-8 text-center w-full">
+                                    {currentQ.solved ? (
+                                        <div className="animate-bounce-short">
+                                            <div className="text-3xl md:text-5xl font-black text-green-500 tracking-widest mb-2 break-words">
+                                                {currentQ.word}
+                                            </div>
+                                            <div className="text-green-600 font-bold text-lg mt-2">
+                                                🎉 Solved!
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-col items-center">
+                                            <div className="text-3xl md:text-5xl font-black text-gray-800 tracking-widest mb-2 scramble-text break-words uppercase">
+                                                {currentQ.scramble}
+                                            </div>
+                                            {/* Revealed letters hint */}
+                                            {revealedCount > 0 && (
+                                                <div className="mt-2 font-mono text-xl text-indigo-500 font-bold tracking-widest bg-indigo-50 px-4 py-1 rounded">
+                                                    {currentQ.word.substring(0, revealedCount)}
+                                                    <span className="text-gray-300">{' _'.repeat(currentQ.word.length - revealedCount)}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                    
+                                    <div className="mt-6 bg-yellow-50 border-l-4 border-yellow-400 p-4 text-left max-w-md mx-auto rounded-r-lg">
+                                        <p className="text-gray-700 italic text-lg leading-relaxed">
+                                            <span className="font-bold not-italic text-yellow-700 mr-2">Hint:</span>
+                                            {currentQ.hint}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {!currentQ.solved ? (
+                                    <form onSubmit={handleCheck} className="w-full max-w-sm space-y-4">
+                                        <div className={`relative ${shake ? 'animate-shake' : ''}`}>
+                                            <input 
+                                                ref={inputRef}
+                                                type="text" 
+                                                value={userInput}
+                                                onChange={(e) => setUserInput(e.target.value)}
+                                                className={`w-full text-center text-2xl p-4 border-2 rounded-xl outline-none transition-colors uppercase font-bold tracking-wider
+                                                    ${shake ? 'border-red-400 bg-red-50 text-red-600' : 'border-gray-300 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 text-gray-800'}
+                                                `}
+                                                placeholder="TYPE ANSWER"
+                                                autoComplete="off"
+                                                autoCorrect="off"
+                                                spellCheck="false"
+                                                autoFocus
+                                            />
+                                        </div>
+
+                                        <div className="flex space-x-3">
+                                            <button 
+                                                type="button"
+                                                onClick={handleReveal}
+                                                disabled={revealedCount >= currentQ.word.length - 1}
+                                                className={`flex-1 bg-gray-100 text-gray-600 font-bold py-4 rounded-xl transition duration-200 shadow-sm border border-gray-200 text-sm flex flex-col items-center justify-center
+                                                    ${revealedCount >= currentQ.word.length - 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-200 hover:text-indigo-600'}
+                                                `}
+                                            >
+                                                <span>Reveal Letter</span>
+                                                <span className="text-xs text-red-400 font-normal">-5 pts</span>
+                                            </button>
+
+                                            <button 
+                                                type="submit"
+                                                className="flex-[2] bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl transition duration-200 shadow-md text-lg"
+                                            >
+                                                Check Answer
+                                            </button>
+                                        </div>
+                                    </form>
+                                ) : (
+                                    <div className="text-center">
+                                        <p className="text-gray-500 mb-4">Select another number from the grid above.</p>
+                                        <button 
+                                            onClick={() => {
+                                                // Find next unsolved index
+                                                let nextIdx = -1;
+                                                for (let i = currentIndex + 1; i < questions.length; i++) {
+                                                    if (!questions[i].solved) {
+                                                        nextIdx = i;
+                                                        break;
+                                                    }
+                                                }
+                                                if (nextIdx === -1) {
+                                                    for (let i = 0; i < currentIndex; i++) {
+                                                         if (!questions[i].solved) {
+                                                            nextIdx = i;
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+                                                
+                                                if (nextIdx !== -1) switchQuestion(nextIdx);
+                                            }}
+                                            className="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 font-bold py-3 px-8 rounded-xl transition duration-200"
+                                        >
+                                            Next Unsolved Word
+                                        </button>
+                                    </div>
+                                )}
+
+                            </div>
+                        </div>
+                    </div>
+                    <Footer />
+                </>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
